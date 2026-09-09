@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Square Background -->
+  <rect width="1024" height="1024" rx="180" fill="#181825"/>
+  <rect x="32" y="32" width="960" height="960" rx="150" fill="none" stroke="#313244" stroke-width="8"/>
+
+  <!-- Outer Cryptographic Ring -->
+  <circle cx="512" cy="512" r="380" fill="none" stroke="#89b4fa" stroke-width="6" stroke-dasharray="24 16" opacity="0.6"/>
+  <circle cx="512" cy="512" r="340" fill="none" stroke="#cba6f7" stroke-width="4" stroke-dasharray="12 12" opacity="0.4"/>
+  <circle cx="512" cy="512" r="290" fill="#1e1e2e" stroke="#fab387" stroke-width="12"/>
+
+  <!-- Futhark Runic Accent Characters around the Ring -->
+  <text x="512" y="180" font-family="sans-serif" font-size="36" fill="#89b4fa" text-anchor="middle" opacity="0.7">ᚠ ᚢ ᚦ ᚨ ᚱ ᚲ</text>
+  <text x="512" y="870" font-family="sans-serif" font-size="36" fill="#89b4fa" text-anchor="middle" opacity="0.7">ᚺ ᚾ ᛁ ᛃ ᛇ ᛈ</text>
+
+  <!-- Central Glowing Teiwaz Rune (ᛏ) -->
+  <g fill="none" stroke="#f9e2af" stroke-width="48" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Main Vertical Shaft -->
+    <path d="M 512 280 L 512 740"/>
+    <!-- Arrowhead Wings -->
+    <path d="M 370 410 L 512 280 L 654 410"/>
+  </g>
+
+  <!-- Inner Rune Glow Line -->
+  <g fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.8">
+    <path d="M 512 295 L 512 725"/>
+    <path d="M 385 410 L 512 295 L 639 410"/>
+  </g>
+</svg>

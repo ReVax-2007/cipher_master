@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cipher Master</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      padding: 2rem;
+      margin: 0;
+    }
+    h1 { color: #89b4fa; margin-top: 0; }
+    .form-group { margin-bottom: 1.2rem; }
+    label { display: block; margin-bottom: 0.4rem; color: #a6adc8; }
+    select, button {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #45475a;
+      background: #313244;
+      color: #cdd6f4;
+      font-size: 1rem;
+    }
+    button {
+      background: #89b4fa;
+      color: #11111b;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 1rem;
+      border: none;
+    }
+    button:hover { background: #b4befe; }
+    #output {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: #181825;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>ᛏ Cipher Master Engine</h1>
+
+  <div class="form-group">
+    <label for="cipher">Cipher Type:</label>
+    <select id="cipher">
+      <option value="CustomFuthark">Elder Futhark Runes</option>
+      <option value="Caesar">Caesar Shift</option>
+      <option value="Atbash">Atbash Cipher</option>
+      <option value="Substitution">Monoalphabetic Substitution</option>
+      <option value="Vigenere">Vigenère Cipher</option>
+      <option value="RailFence">Rail Fence (Zig-Zag)</option>
+      <option value="Affine">Affine Cipher</option>
+      <option value="A1Z26">A1Z26 Numeric</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="difficulty">Difficulty:</label>
+    <select id="difficulty">
+      <option value="Easy">Easy (Preserves spaces & punctuation)</option>
+      <option value="Medium">Medium (Uppercase, no punctuation)</option>
+      <option value="Hard">Hard (Grouped 5-character blocks)</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="length">Text Length:</label>
+    <select id="length">
+      <option value="1">Short (~5-8 words)</option>
+      <option value="2">Medium (~15-20 words)</option>
+      <option value="3">Long (~30+ words)</option>
+    </select>
+  </div>
+
+  <button onclick="generateCipher()">Generate Challenge Desktop Files</button>
+
+  <div id="output">Outputs will appear here...</div>
+
+  <script>
+    function getInvoke() {
+      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
+        return window.__TAURI__.core.invoke;
+      } else if (window.__TAURI__ && window.__TAURI__.invoke) {
+        return window.__TAURI__.invoke;
+      } else if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
+        return window.__TAURI_INTERNALS__.invoke;
+      }
+      throw new Error("Tauri IPC bindings not found.");
+    }
+
+    async function generateCipher() {
+      const cipher = document.getElementById("cipher").value;
+      const difficulty = document.getElementById("difficulty").value;
+      const lengthChoice = parseInt(document.getElementById("length").value);
+      const output = document.getElementById("output");
+
+      output.innerText = "Querying local AI & generating cipher files...";
+
+      try {
+        const invokeFn = getInvoke();
+        const response = await invokeFn("generate_cipher_challenge", {
+          cipher_type: cipher,
+          difficulty: difficulty,
+          length_choice: lengthChoice
+        });
+        output.innerText = response;
+      } catch (err) {
+        output.innerText = "Error: " + (err.message || err);
+      }
+    }
+  </script>
+</body>
+</html>
