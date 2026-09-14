@@ -39,14 +39,13 @@ jobs:
             patchelf
 
       - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v__VERSION__
-          releaseName: 'Cipher Master v__VERSION__'
+          projectPath: src-tauri
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Cipher Master ${{ github.ref_name }}'
           releaseBody: 'Download the compiled standalone application binaries below.'
           releaseDraft: true
           prerelease: false
-          includeRelease: true
-          includeDebug: false
