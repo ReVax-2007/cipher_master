@@ -13,7 +13,7 @@ An AI-powered desktop application built with **Rust** and **Tauri v2** that gene
 
 ## 🌟 Key Features
 
-* **8 Cipher Engines**:
+* **9 Cipher Engines**:
   * **Elder Futhark Runes**: Custom handwritten runic character map.
   * **Caesar Shift**: Dynamic rotational shift ($1..25$).
   * **Atbash Cipher**: Reversed alphabet substitution.
@@ -22,6 +22,7 @@ An AI-powered desktop application built with **Rust** and **Tauri v2** that gene
   * **Rail Fence (Zig-Zag)**: Multi-rail transposition matrix.
   * **Affine Cipher**: Mathematical linear function cipher ($E(x) = (ax + b) \pmod{26}$).
   * **A1Z26 Numeric**: Positional index substitution.
+  * **Fill in the Blank**: Assigns every letter a unique number from `01` to `26`, reveals a few mappings as clues, and preserves repeated-letter patterns.
 * **Local AI Integration & Fallback Support**: Connects to a local [Ollama](https://ollama.com/) instance (`llama3.2:1b`) to generate dynamic quotes. If Ollama is not installed or running, the engine automatically uses internal text prompts.
 * **Difficulty Scaling**:
   * **Easy**: Preserves original word boundaries, spaces, and punctuation. Generates detailed letter frequency and vowel count hints.
@@ -31,6 +32,10 @@ An AI-powered desktop application built with **Rust** and **Tauri v2** that gene
   * `cipher_challenge.txt`: Formatted ciphertext ready to solve.
   * `cipher_hint.txt`: Cryptanalytic structural metrics and riddle clues.
   * `cipher_solution.txt`: Full original plaintext and decryption parameters/keys.
+
+### Fill in the Blank Mode
+
+This mode creates a numeric substitution puzzle. Each letter is assigned a unique number from `01` to `26`; the same letter always produces the same number, while different letters never share a number. Word boundaries remain visible in the challenge, and `cipher_hint.txt` reveals a small number of starter mappings based on the selected difficulty. The complete alphabet mapping is available only in `cipher_solution.txt`.
 * **Cross-Platform Support**: Native desktop GUI built for macOS and Windows.
 
 ---

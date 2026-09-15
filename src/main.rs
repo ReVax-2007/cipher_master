@@ -19,6 +19,7 @@ enum CipherType {
     RailFence,
     Affine,
     A1Z26,
+    FillInTheBlank,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -54,6 +55,7 @@ fn generate_cipher_challenge(
         "Vigenere" => CipherType::Vigenere,
         "RailFence" => CipherType::RailFence,
         "Affine" => CipherType::Affine,
+        "FillInTheBlank" => CipherType::FillInTheBlank,
         _ => CipherType::A1Z26,
     };
 
@@ -204,7 +206,7 @@ fn get_custom_futhark_map() -> HashMap<char, char> {
 fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String, String) {
     let mut rng = rand::thread_rng();
 
-    let (ciphertext, key_info) = match cipher {
+    let (ciphertext, key_info, custom_hint) = match cipher {
         CipherType::CustomFuthark => {
             let map = get_custom_futhark_map();
             let encrypted = text
@@ -212,7 +214,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                 .chars()
                 .map(|c| *map.get(&c).unwrap_or(&c))
                 .collect();
-            (encrypted, "Elder Futhark Key Map".to_string())
+            (encrypted, "Elder Futhark Key Map".to_string(), None)
         }
         CipherType::Caesar => {
             let shift = rng.gen_range(1..25) as u8;
@@ -225,7 +227,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                     } else { c }
                 })
                 .collect();
-            (encrypted, format!("Caesar Shift = {}", shift))
+            (encrypted, format!("Caesar Shift = {}", shift), None)
         }
         CipherType::Atbash => {
             let encrypted = text
@@ -237,7 +239,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                     } else { c }
                 })
                 .collect();
-            (encrypted, "Atbash (Reversed Alphabet)".to_string())
+            (encrypted, "Atbash (Reversed Alphabet)".to_string(), None)
         }
         CipherType::Substitution => {
             let mut alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
@@ -255,7 +257,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                 })
                 .collect();
             let key_str = map.iter().map(|(k, v)| format!("{}->{}", k, v)).collect::<Vec<String>>().join(", ");
-            (encrypted, format!("Substitution Table: [{}]", key_str))
+            (encrypted, format!("Substitution Table: [{}]", key_str), None)
         }
         CipherType::Vigenere => {
             let keys = vec!["ODIN", "THOR", "VALHALLA", "RUNE", "RUST", "CRYPT"];
@@ -274,7 +276,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                     } else { c }
                 })
                 .collect();
-            (encrypted, format!("Vigenere Passphrase: {}", key))
+            (encrypted, format!("Vigenere Passphrase: {}", key), None)
         }
         CipherType::RailFence => {
             let rails = rng.gen_range(2..=4);
@@ -290,7 +292,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
             }
 
             let encrypted = fence.into_iter().flatten().collect();
-            (encrypted, format!("Rail Fence Depth = {} Rails", rails))
+            (encrypted, format!("Rail Fence Depth = {} Rails", rails), None)
         }
         CipherType::Affine => {
             let a_options = vec![3, 5, 7, 9, 11, 15, 17, 19, 21, 23];
@@ -308,7 +310,7 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                     } else { c }
                 })
                 .collect();
-            (encrypted, format!("Affine Cipher: E(x) = ({}x + {}) mod 26", a, b))
+            (encrypted, format!("Affine Cipher: E(x) = ({}x + {}) mod 26", a, b), None)
         }
         CipherType::A1Z26 => {
             let encrypted = text
@@ -324,12 +326,71 @@ fn encrypt(text: &str, cipher: CipherType, diff: Difficulty) -> (String, String,
                 .collect::<String>()
                 .trim_start_matches('-')
                 .to_string();
-            (encrypted, "A1Z26 Position Mapping".to_string())
+            (encrypted, "A1Z26 Position Mapping".to_string(), None)
+        }
+        CipherType::FillInTheBlank => {
+            let (challenge, key, hint) = generate_fill_in_the_blank(text, diff, &mut rng);
+            (challenge, key, Some(hint))
         }
     };
 
-    let content_hint = generate_content_hints(text, diff);
+    let content_hint = custom_hint.unwrap_or_else(|| generate_content_hints(text, diff));
     (ciphertext, key_info, content_hint)
+}
+
+fn generate_fill_in_the_blank(
+    text: &str,
+    diff: Difficulty,
+    rng: &mut impl Rng,
+) -> (String, String, String) {
+    let alphabet: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".chars().collect();
+    let mut numbers: Vec<u8> = (1..=26).collect();
+    numbers.shuffle(rng);
+    let mapping: HashMap<char, u8> = alphabet.iter().copied().zip(numbers).collect();
+
+    let challenge = text
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphabetic() {
+                format!("{:02} ", mapping[&character.to_ascii_uppercase()])
+            } else if character.is_whitespace() {
+                "   ".to_string()
+            } else {
+                character.to_string()
+            }
+        })
+        .collect::<String>()
+        .trim_end()
+        .to_string();
+
+    let used_letters: Vec<char> = alphabet
+        .iter()
+        .copied()
+        .filter(|letter| text.to_ascii_uppercase().contains(*letter))
+        .collect();
+    let clue_count = match diff {
+        Difficulty::Easy => 4,
+        Difficulty::Medium => 3,
+        Difficulty::Hard => 2,
+    }
+    .min(used_letters.len());
+    let clues = used_letters
+        .iter()
+        .take(clue_count)
+        .map(|letter| format!("{} = {:02}", letter, mapping[letter]))
+        .collect::<Vec<String>>();
+
+    let key = alphabet
+        .iter()
+        .map(|letter| format!("{}={:02}", letter, mapping[letter]))
+        .collect::<Vec<String>>()
+        .join(", ");
+    let hint = format!(
+        "FILL-IN-THE-BLANK RULES:\n- Each number represents one letter.\n- Every letter uses a unique number from 01 to 26.\n- Repeated numbers represent repeated letters.\n\nKNOWN LETTER MAPPINGS:\n{}",
+        clues.join(", ")
+    );
+
+    (challenge, format!("Fill-in-the-Blank Number Key: {}", key), hint)
 }
 
 fn generate_content_hints(plaintext: &str, diff: Difficulty) -> String {
