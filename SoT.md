@@ -125,6 +125,7 @@ $$E(x) = (a \cdot x + b) \pmod{26}$$
 
 
 8. **A1Z26 Numeric**: Converts each letter to its 1-based numerical index separated by hyphens (e.g., $A=1, B=2, Z=26$).
+9. **Fill in the Blank**: Builds a randomized one-to-one mapping from every letter in $A..Z$ to a unique number in $01..26$. The challenge displays those numbers while preserving word boundaries, `cipher_hint.txt` reveals a small set of known letter mappings, and `cipher_solution.txt` stores the complete mapping.
 
 ### B. Difficulty Formatting Pipeline
 
