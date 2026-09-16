@@ -23,7 +23,7 @@ An AI-powered desktop application built with **Rust** and **Tauri v2** that gene
   * **Affine Cipher**: Mathematical linear function cipher ($E(x) = (ax + b) \pmod{26}$).
   * **A1Z26 Numeric**: Positional index substitution.
   * **Fill in the Blank**: Assigns every letter a unique number from `01` to `26`, reveals a few mappings as clues, and preserves repeated-letter patterns.
-* **Local AI Integration & Fallback Support**: Connects to a local [Ollama](https://ollama.com/) instance (`llama3.2:1b`) to generate dynamic quotes. If Ollama is not installed or running, the engine automatically uses internal text prompts.
+* **Local AI Integration & Fallback Support**: Connects to a local [Ollama](https://ollama.com/) instance (`llama3.2:1b`) to generate dynamic quotes. If Ollama is not installed or running, the engine selects a quote from `src-tauri/data/quotes.json`.
 * **Difficulty Scaling**:
   * **Easy**: Preserves original word boundaries, spaces, and punctuation. Generates detailed letter frequency and vowel count hints.
   * **Medium**: Converts text to uppercase and strips all punctuation.
@@ -44,28 +44,73 @@ This mode creates a numeric substitution puzzle. Each letter is assigned a uniqu
 
 If you do not want to run Ollama locally or prefer using your own custom paragraphs, quotes, or text passages:
 
-1. Open `src-tauri/src/lib.rs` in your text editor.
-2. Locate the `fallback_quote` function:
-   ```rust
-   fn fallback_quote(length_choice: usize) -> String {
-       let topics = ["VIKINGS", "KNOWLEDGE", "FORTUNE", "STRATEGY", "FREEDOM"];
-       let actions = [
-           "SAILED ACROSS THE UNKNOWN", 
-           "DISCOVERED HIDDEN TRUTHS", 
-           "FAVORED THE BRAVE MINDS", 
-           "PROTECTED LIBERTY WITH SECRETS"
-       ];
-       // ...
-   }
-3. To hardcode a custom text passage or quote directly, modify the function to return your desired text string:
-```rust
-fn fallback_quote(_length_choice: usize) -> String {
-    "YOUR CUSTOM PARAGRAPH OR PHRASE GOES HERE".to_string()
-}
+1. Edit `src-tauri/data/quotes.json` and add plain JSON strings to the array.
+2. Keep the file as valid JSON. Quotes are selected by word count when possible, then a random entry is used as a final fallback.
+3. Rebuild or run `cargo tauri dev` to apply the updated text pool.
+
+## Android Packaging
+
+Tauri v2 supports Android from the same project. Install Android Studio, the Android SDK, and the Rust Android targets, then run:
+
+```bash
+cargo tauri android init
+cargo tauri android dev
+cargo tauri android build
 ```
 
+The generated Android project lives under `src-tauri/gen/android` and should be reviewed before committing. The responsive frontend and bundled quote library work without a desktop-only dependency; Ollama remains optional and is normally unavailable on a phone.
 
-4. Rebuild or run `cargo tauri dev` to apply your custom text pool.
+## Discord Slash Commands Setup
+
+The opt-in starter bot lives in `integrations/discord-bot`. It supports `/cipher`, `/hint`, and `/solution`. Challenges are stored in memory per guild and user; hints and solutions are sent as ephemeral replies.
+
+### 1. Create the Discord application
+
+1. Open the [Discord Developer Portal](https://discord.com/developers/applications) and select **New Application**.
+2. Open **General Information** and copy the **Application ID**. This is `DISCORD_CLIENT_ID`.
+3. Open **Bot**, select **Reset Token**, and copy the token once. This is `DISCORD_TOKEN`. Treat it like a password and never commit it.
+4. Under **OAuth2 > URL Generator**, select the `bot` and `applications.commands` scopes.
+5. Select the `Send Messages` bot permission, open the generated URL, and invite the bot to a test server.
+
+### 2. Install and configure the bot
+
+From the repository root:
+
+```bash
+cd integrations/discord-bot
+npm install
+```
+
+Set the credentials in the same terminal session. macOS/Linux:
+
+```bash
+export DISCORD_TOKEN="paste-your-bot-token-here"
+export DISCORD_CLIENT_ID="paste-your-application-id-here"
+```
+
+PowerShell:
+
+```powershell
+$env:DISCORD_TOKEN = "paste-your-bot-token-here"
+$env:DISCORD_CLIENT_ID = "paste-your-application-id-here"
+```
+
+### 3. Register and run the commands
+
+```bash
+npm run register
+npm start
+```
+
+The registration command installs the commands globally for the application. Discord can take up to an hour to propagate global commands. Keep `npm start` running while testing, or run it with a process manager for a hosted deployment.
+
+Available commands:
+
+* `/cipher` creates a Caesar or Atbash challenge. Use the optional `type` argument to choose the cipher.
+* `/hint` returns a private hint for your current challenge.
+* `/solution` returns the plaintext and key privately.
+
+The bot uses the bundled `src-tauri/data/quotes.json` library. It does not call Ollama or persist challenges after restart. Add a database before running multiple bot instances or requiring durable challenge history.
 
 ---
 
@@ -110,6 +155,7 @@ cipher_game/
 * [Rust](https://www.rust-lang.org/tools/install) (1.75 or newer)
 * `cargo-tauri` CLI (Install via `cargo install tauri-cli --version "^2.0"`)
 * *(Optional)* [Ollama](https://ollama.com/) running locally on port `11434` with `llama3.2:1b` installed (`ollama pull llama3.2:1b`).
+* *(Optional, Discord bot only)* [Node.js](https://nodejs.org/) 20 or newer and npm.
 
 ---
 

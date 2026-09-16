@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Cipher Master",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "identifier": "com.xvoet.ciphermaster",
   "build": {
     "frontendDist": "../public"

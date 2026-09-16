@@ -1,4 +1,5 @@
 use rand::seq::SliceRandom;
+use rand::seq::IteratorRandom;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -37,6 +38,11 @@ struct OllamaRequest<'a> {
 #[derive(Deserialize)]
 struct OllamaResponse {
     response: String,
+}
+
+fn bundled_quotes() -> Vec<String> {
+    serde_json::from_str(include_str!("../data/quotes.json"))
+        .expect("bundled quote data must be valid JSON")
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -143,16 +149,21 @@ fn get_ai_quote(length_choice: usize) -> String {
 }
 
 fn fallback_quote(length_choice: usize) -> String {
-    let topics = ["VIKINGS", "KNOWLEDGE", "FORTUNE", "STRATEGY", "FREEDOM"];
-    let actions = ["SAILED ACROSS THE UNKNOWN", "DISCOVERED HIDDEN TRUTHS", "FAVORED THE BRAVE MINDS", "PROTECTED LIBERTY WITH SECRETS"];
+    let quotes = bundled_quotes();
+    let target_range = match length_choice {
+        1 => 5..=10,
+        2 => 11..=20,
+        _ => 21..=40,
+    };
     let mut rng = rand::thread_rng();
 
-    let base = format!("{} {}", topics.choose(&mut rng).unwrap(), actions.choose(&mut rng).unwrap());
-    if length_choice > 1 {
-        format!("{} AND UNLOCKED THE SECRETS OF THE ANCIENT RUNES", base)
-    } else {
-        base
-    }
+    quotes
+        .iter()
+        .filter(|quote| target_range.contains(&quote.split_whitespace().count()))
+        .choose(&mut rng)
+        .or_else(|| quotes.choose(&mut rng))
+        .expect("quote fallback data must not be empty")
+        .to_uppercase()
 }
 
 fn get_desktop_path() -> PathBuf {
