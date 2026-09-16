@@ -2,120 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cipher Master</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #1e1e2e;
-      color: #cdd6f4;
-      padding: 2rem;
-      margin: 0;
-    }
-    h1 { color: #89b4fa; margin-top: 0; }
-    .form-group { margin-bottom: 1.2rem; }
-    label { display: block; margin-bottom: 0.4rem; color: #a6adc8; }
-    select, button {
-      width: 100%;
-      padding: 0.6rem;
-      border-radius: 6px;
-      border: 1px solid #45475a;
-      background: #313244;
-      color: #cdd6f4;
-      font-size: 1rem;
-    }
-    button {
-      background: #89b4fa;
-      color: #11111b;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 1rem;
-      border: none;
-    }
-    button:hover { background: #b4befe; }
-    #output {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: #181825;
-      border-radius: 6px;
-      white-space: pre-wrap;
-      font-family: monospace;
-      max-height: 200px;
-      overflow-y: auto;
-    }
+    :root { --ink: #18222d; --muted: #6a7783; --panel: #fffdf8; --line: #ded7c9; --copper: #b75d3b; --teal: #176b6b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; color: var(--ink); font-family: Georgia, "Times New Roman", serif; background: radial-gradient(circle at 90% 5%, #f0c9a5 0, transparent 28%), linear-gradient(135deg, #f7f3ea, #dfe9e4); }
+    main { width: min(1050px, 100%); margin: auto; padding: clamp(1.25rem, 4vw, 4rem); }
+    header { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 2rem; }
+    .eyebrow { color: var(--copper); font: 700 .75rem/1.2 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+    h1 { margin: .35rem 0 0; font-size: clamp(2.1rem, 6vw, 4.6rem); line-height: .95; }
+    .mark { color: var(--teal); font-size: 2.5rem; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: 1.25rem; }
+    .panel { background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 18px 45px #293b3214; padding: clamp(1.1rem, 3vw, 2rem); }
+    .panel h2 { margin: 0 0 1.35rem; font-size: 1.35rem; }
+    .fields { display: grid; gap: 1rem; }
+    label { display: grid; gap: .42rem; color: var(--muted); font: 700 .75rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    select, button { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 5px; padding: .75rem .85rem; font: 1rem system-ui, sans-serif; }
+    select { color: var(--ink); background: #fff; }
+    button { margin-top: 1.3rem; border: 0; color: #fff; background: var(--teal); font-weight: 700; cursor: pointer; transition: transform .2s, background .2s; }
+    button:hover { background: #0e5252; transform: translateY(-2px); }
+    button:disabled { cursor: wait; opacity: .65; transform: none; }
+    .side { display: grid; align-content: start; gap: 1rem; }
+    .status { color: var(--teal); font: 700 .78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; }
+    #output { min-height: 235px; margin: 0; padding: 1rem; overflow: auto; white-space: pre-wrap; color: #f9f4e9; background: #18222d; border-radius: 5px; font: .85rem/1.55 ui-monospace, SFMono-Regular, monospace; }
+    .note { color: var(--muted); font: .92rem/1.5 system-ui, sans-serif; }
+    @media (max-width: 720px) { header { align-items: start; } .layout { grid-template-columns: 1fr; } .mark { font-size: 1.8rem; } }
   </style>
 </head>
 <body>
-  <h1>ᛏ Cipher Master Engine</h1>
-
-  <div class="form-group">
-    <label for="cipher">Cipher Type:</label>
-    <select id="cipher">
-      <option value="CustomFuthark">Elder Futhark Runes</option>
-      <option value="Caesar">Caesar Shift</option>
-      <option value="Atbash">Atbash Cipher</option>
-      <option value="Substitution">Monoalphabetic Substitution</option>
-      <option value="Vigenere">Vigenère Cipher</option>
-      <option value="RailFence">Rail Fence (Zig-Zag)</option>
-      <option value="Affine">Affine Cipher</option>
-      <option value="A1Z26">A1Z26 Numeric</option>
-      <option value="FillInTheBlank">Fill in the Blank (Number Mapping)</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label for="difficulty">Difficulty:</label>
-    <select id="difficulty">
-      <option value="Easy">Easy (Preserves spaces & punctuation)</option>
-      <option value="Medium">Medium (Uppercase, no punctuation)</option>
-      <option value="Hard">Hard (Grouped 5-character blocks)</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label for="length">Text Length:</label>
-    <select id="length">
-      <option value="1">Short (~5-8 words)</option>
-      <option value="2">Medium (~15-20 words)</option>
-      <option value="3">Long (~30+ words)</option>
-    </select>
-  </div>
-
-  <button onclick="generateCipher()">Generate Challenge Desktop Files</button>
-
-  <div id="output">Outputs will appear here...</div>
-
+  <main>
+    <header><div><div class="eyebrow">A field kit for curious minds</div><h1><span class="mark">ᛏ</span> Cipher Master</h1></div><div class="status" id="status">Ready to encrypt</div></header>
+    <section class="layout">
+      <div class="panel"><h2>Compose a challenge</h2><div class="fields">
+        <label for="cipher">Cipher<select id="cipher"><option value="CustomFuthark">Elder Futhark Runes</option><option value="Caesar">Caesar Shift</option><option value="Atbash">Atbash Cipher</option><option value="Substitution">Monoalphabetic Substitution</option><option value="Vigenere">Vigenere Cipher</option><option value="RailFence">Rail Fence</option><option value="Affine">Affine Cipher</option><option value="A1Z26">A1Z26 Numeric</option><option value="FillInTheBlank">Fill in the Blank</option></select></label>
+        <label for="difficulty">Difficulty<select id="difficulty"><option value="Easy">Easy - spaces and punctuation</option><option value="Medium">Medium - uppercase text</option><option value="Hard">Hard - five character blocks</option></select></label>
+        <label for="length">Quote length<select id="length"><option value="1">Short</option><option value="2">Medium</option><option value="3">Long</option></select></label>
+      </div><button id="generate" onclick="generateCipher()">Generate challenge</button></div>
+      <aside class="side"><div class="panel"><h2>Challenge output</h2><pre id="output">Your encrypted challenge and Desktop file paths will appear here.</pre></div><p class="note">Ollama is optional. When no model is available, Cipher Master selects a quote from its bundled local library.</p></aside>
+    </section>
+  </main>
   <script>
-    function getInvoke() {
-      if (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke) {
-        return window.__TAURI__.core.invoke;
-      } else if (window.__TAURI__ && window.__TAURI__.invoke) {
-        return window.__TAURI__.invoke;
-      } else if (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke) {
-        return window.__TAURI_INTERNALS__.invoke;
-      }
-      throw new Error("Tauri IPC bindings not found.");
-    }
-
-    async function generateCipher() {
-      const cipher = document.getElementById("cipher").value;
-      const difficulty = document.getElementById("difficulty").value;
-      const lengthChoice = parseInt(document.getElementById("length").value);
-      const output = document.getElementById("output");
-
-      output.innerText = "Querying local AI & generating cipher files...";
-
-      try {
-        const invokeFn = getInvoke();
-        const response = await invokeFn("generate_cipher_challenge", {
-          cipher_type: cipher,
-          difficulty: difficulty,
-          length_choice: lengthChoice
-        });
-        output.innerText = response;
-      } catch (err) {
-        output.innerText = "Error: " + (err.message || err);
-      }
-    }
+    function getInvoke() { const tauri = window.__TAURI__; if (tauri?.core?.invoke) return tauri.core.invoke; if (tauri?.invoke) return tauri.invoke; if (window.__TAURI_INTERNALS__?.invoke) return window.__TAURI_INTERNALS__.invoke; throw new Error("Tauri IPC bindings not found."); }
+    async function generateCipher() { const button = document.getElementById("generate"); const output = document.getElementById("output"); const status = document.getElementById("status"); button.disabled = true; status.textContent = "Forging challenge..."; output.textContent = "Selecting quote and encrypting..."; try { output.textContent = await getInvoke()("generate_cipher_challenge", { cipher_type: cipher.value, difficulty: difficulty.value, length_choice: Number(length.value) }); status.textContent = "Challenge ready"; } catch (error) { output.textContent = "Error: " + (error.message || error); status.textContent = "Generation failed"; } finally { button.disabled = false; } }
   </script>
 </body>
 </html>
