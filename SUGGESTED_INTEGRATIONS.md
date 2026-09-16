@@ -20,7 +20,8 @@ This document outlines proposed integrations with external services, tools, and 
 * **Custom Printed Output (Thermal Printers)**: Direct USB/Bluetooth printer integration to print cryptographic escape room physical receipts/slips.
 
 ## 5. Other OSes
-* **Android Packaging**: Tauri Android support is ready to initialize with `cargo tauri android init` and build with `cargo tauri android build`. The responsive frontend and bundled quote fallback keep the mobile app useful without Ollama.
+* **Android Packaging**: The release workflow provisions Java 17, Android API 35, build tools, the Android NDK, and Rust Android targets, initializes Tauri Android, and builds both APK and AAB packages. Local builds use `cargo tauri android init` followed by `cargo tauri android build --apk --aab`.
+* **Android release artifacts**: GitHub Actions uploads the APK/AAB files to the workflow run and attaches them to tagged GitHub releases. Store-ready distribution still requires Android signing secrets and a signing configuration.
 
 ## 6. Discord Slash Commands
 * **Discord bot starter**: `integrations/discord-bot` provides `/cipher`, `/hint`, and `/solution`. It uses the bundled quote library, keeps challenge state per user, and makes hints and solutions ephemeral.

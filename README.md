@@ -58,7 +58,13 @@ cargo tauri android dev
 cargo tauri android build
 ```
 
-The generated Android project lives under `src-tauri/gen/android` and should be reviewed before committing. The responsive frontend and bundled quote library work without a desktop-only dependency; Ollama remains optional and is normally unavailable on a phone.
+The generated Android project lives under `src-tauri/gen/android` and should be reviewed before committing. To build both Android package formats locally after setup:
+
+```bash
+cargo tauri android build --apk --aab
+```
+
+The APK and AAB outputs are written under `src-tauri/gen/android/app/build/outputs/`. The tagged GitHub Actions release workflow also provisions Java 17, Android API 35, build tools, the Android NDK, and Rust Android targets, then uploads the APK/AAB files as a workflow artifact. A signed store release requires configuring Android signing secrets; unsigned packages are suitable for testing only.
 
 ## Discord Slash Commands Setup
 
