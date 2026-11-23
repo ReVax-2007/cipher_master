@@ -2,6 +2,7 @@
 
 An AI-powered desktop application built with **Rust** and **Tauri v2** that generates randomized cryptographic challenges, structural analysis hints, and solution sheets directly to your Desktop.
 
+
 ---
 
 ## ⚠️ Contribution & Branching Rules
@@ -13,30 +14,39 @@ An AI-powered desktop application built with **Rust** and **Tauri v2** that gene
 
 ## 🌟 Key Features
 
-* **9 Cipher Engines**:
-  * **Elder Futhark Runes**: Custom handwritten runic character map.
-  * **Caesar Shift**: Dynamic rotational shift ($1..25$).
+* **13 Cipher Engines** (every one has an encoder *and* a decoder, verified by round-trip tests):
+  * **Elder Futhark Runes**: One-to-one runic map (A=ᚨ … Z=ᛉ), shown in the in-app Rune Map.
+  * **Caesar Shift**: Rotational shift (1–25).
   * **Atbash Cipher**: Reversed alphabet substitution.
   * **Monoalphabetic Substitution**: Randomized key mapping.
-  * **Vigenère Cipher**: Polyalphabetic cipher using periodic key phrases.
-  * **Rail Fence (Zig-Zag)**: Multi-rail transposition matrix.
-  * **Affine Cipher**: Mathematical linear function cipher ($E(x) = (ax + b) \pmod{26}$).
+  * **Vigenère Cipher**: Polyalphabetic cipher using periodic keywords.
+  * **Rail Fence (Zig-Zag)**: Multi-rail transposition.
+  * **Affine Cipher**: $E(x) = (ax + b) \pmod{26}$.
   * **A1Z26 Numeric**: Positional index substitution.
-  * **Fill in the Blank**: Assigns every letter a unique number from `01` to `26`, reveals a few mappings as clues, and preserves repeated-letter patterns.
-* **Local AI Integration & Fallback Support**: Connects to a local [Ollama](https://ollama.com/) instance (`llama3.2:1b`) to generate dynamic quotes. If Ollama is not installed or running, the engine selects a quote from `src-tauri/data/quotes.json`.
+  * **Fill in the Blank**: Every letter gets a unique number `01`–`26`; a few mappings are given as clues.
+  * **Playfair**: Digraph substitution with a 5x5 keyword square (I=J, X filler).
+  * **Enigma I**: Three-rotor emulator (rotors I–V, reflector B/C, ring settings, plugboard, double stepping).
+  * **Baconian**: Binary A/B substitution (26-letter variant).
+  * **Columnar Transposition**: Keyword column transposition; Hard mode uses a double (two-pass) transposition.
+* **Chained encryption**: Stack up to four ciphers (e.g. Vigenère → Rail Fence → Baconian). The solution file lists every key and each decoding step.
+* **Quote sources**: Local [Ollama](https://ollama.com/) with a model picker (any installed model, e.g. `llama3.2:1b`, `mistral`, `phi3`, `gemma`), an optional OpenAI or Anthropic API key as a cloud fallback, and the bundled `src-tauri/data/quotes.json` library when nothing else is available. You can also type your own text.
 * **Difficulty Scaling**:
-  * **Easy**: Preserves original word boundaries, spaces, and punctuation. Generates detailed letter frequency and vowel count hints.
-  * **Medium**: Converts text to uppercase and strips all punctuation.
-  * **Hard**: Groups output into uniform 5-character blocks for classic cryptanalysis difficulty.
-* **Automated Desktop Outputs**: Generates three plain-text files on the user's Desktop upon execution:
+  * **Easy**: Keeps spaces and punctuation; detailed hints.
+  * **Medium**: Uppercase, punctuation removed.
+  * **Hard**: Five-character blocks, stronger keys, fewer hints.
+* **Progressive hints & cryptanalysis**: Hints go from structure, to Index of Coincidence and bigram counts, to a riddle, to partial keys.
+* **Decryption workspace**: Letter-frequency chart against English, IC, bigrams/trigrams, a Caesar shift explorer and a live substitution scratchpad.
+* **Timed challenge mode**: Countdown-style timer, answer checking, scoring by speed, difficulty, chain length and hints used, plus best scores.
+* **Output files**: Three plain-text files on your Desktop (the real Desktop reported by the OS, so OneDrive-redirected Windows Desktops work) or in any folder you choose in Settings:
   * `cipher_challenge.txt`: Formatted ciphertext ready to solve.
-  * `cipher_hint.txt`: Cryptanalytic structural metrics and riddle clues.
-  * `cipher_solution.txt`: Full original plaintext and decryption parameters/keys.
+  * `cipher_hint.txt`: Numbered progressive hints.
+  * `cipher_solution.txt`: Plaintext, keys, step-by-step decoding and a CTF flag.
+* **Share & export**: Publish to a GitHub Gist, post to a Discord channel via webhook, open in CyberChef with a ready-made decoding recipe (where CyberChef supports the ciphers), export a CTFd challenge (`challenge.yml` for `ctfcli`, plus a platform-neutral JSON), and print a receipt-width slip on any printer, including USB/Bluetooth thermal printers.
+* **Cross-Platform Support**: Windows, macOS (Apple Silicon + Intel universal build), Linux and Android.
 
-### Fill in the Blank Mode
+### Settings and privacy
 
-This mode creates a numeric substitution puzzle. Each letter is assigned a unique number from `01` to `26`; the same letter always produces the same number, while different letters never share a number. Word boundaries remain visible in the challenge, and `cipher_hint.txt` reveals a small number of starter mappings based on the selected difficulty. The complete alphabet mapping is available only in `cipher_solution.txt`.
-* **Cross-Platform Support**: Native desktop GUI built for macOS and Windows.
+Settings live in the app's config folder (`settings.json`). API keys and the GitHub token are stored there on your computer only and are never shown back in the UI. All integrations are opt-in, and solutions are only shared when you tick "Gist includes solution".
 
 ---
 
@@ -106,32 +116,38 @@ The registration command installs the commands globally for the application. Dis
 
 Available commands:
 
-* `/cipher` creates a Caesar or Atbash challenge. Use the optional `type` argument to choose the cipher.
+* `/cipher` creates a challenge. Use the optional `type` argument to pick Caesar, Atbash, Vigenère, Affine, Substitution, Rail Fence, A1Z26, Baconian or Runes.
 * `/hint` returns a private hint for your current challenge.
 * `/solution` returns the plaintext and key privately.
 
-The bot uses the bundled `src-tauri/data/quotes.json` library. It does not call Ollama or persist challenges after restart. Add a database before running multiple bot instances or requiring durable challenge history.
+The bot uses the bundled `src-tauri/data/quotes.json` library. Challenges are saved to `integrations/discord-bot/data/challenges.json` (override with `CHALLENGE_STORE`) so they survive restarts, and expire after 7 days. For several bot instances, swap `store.js` for a shared database. Run the bot's tests with `npm test`.
 
 ---
 
 ## 📁 Project Architecture
 
 ```text
-cipher_game/
-├── .github/
-│   └── workflows/
-│       └── release.yml          # GitHub Actions CI/CD for cross-platform releases
+cipher_master/
+├── .github/workflows/
+│   ├── ci.yml                   # Tests on every push/PR (Linux + Windows, GUI, Discord bot)
+│   └── release.yml              # Cross-platform release builds on version tags
 ├── public/
-│   └── index.html               # Desktop application UI (Tauri frontend)
+│   └── index.html               # App UI: Create, Solve & Timed Mode, Rune Map, Settings
 ├── src-tauri/
-│   ├── Cargo.toml               # Backend Rust dependencies and crate metadata
-│   ├── tauri.conf.json          # Tauri application and window settings
-│   ├── icons/                   # Multi-resolution application icons
+│   ├── Cargo.toml               # Rust dependencies
+│   ├── tauri.conf.json          # Tauri app and bundle settings
+│   ├── data/quotes.json         # Bundled quote library
 │   └── src/
-│       ├── lib.rs               # Encryption algorithms, AI client, & Tauri commands
-│       └── main.rs              # Application entry point
-├── app-icon.png                 # Master 1024x1024 source icon
-└── Cargo.toml                   # Workspace configuration
+│       ├── lib.rs               # Tauri commands, challenge building, hints, file output
+│       ├── ciphers.rs           # 13 cipher engines (encrypt + decrypt) and chaining
+│       ├── analysis.rs          # Frequency, Index of Coincidence, n-grams
+│       ├── ai.rs                # Ollama / OpenAI / Anthropic quote sources + bundled fallback
+│       ├── integrations.rs      # Gist, Discord webhook, CyberChef links, CTFd export
+│       ├── settings.rs          # Persisted user settings
+│       └── main.rs              # Entry point
+├── tests/gui/                   # Playwright GUI tests (mocked Tauri backend)
+├── integrations/discord-bot/    # Optional Discord slash-command bot
+└── Cargo.toml                   # Cargo workspace (member: src-tauri)
 ```
 
 ---
@@ -144,8 +160,9 @@ cipher_game/
 * **Desktop Application Framework**: Tauri v2
 * **Frontend**: HTML5 / CSS3 / JavaScript (ES6+)
 * **Dependencies**:
-* `rand`: Pseudo-random key generation and shuffling.
-* `ureq`: Lightweight HTTP client for querying the local Ollama API.
+* `rand` (`OsRng`): Cryptographically secure key generation and shuffling.
+* `reqwest` + `tokio`: Async HTTP (Ollama, OpenAI, Anthropic, GitHub, Discord) and async file IO, so the UI never blocks.
+* `tauri-plugin-dialog` / `tauri-plugin-opener`: Folder picker and opening links/folders.
 * `serde` / `serde_json`: JSON serialization for Tauri IPC and API communication.
 
 
@@ -199,18 +216,26 @@ cargo tauri build
 The output installer will be saved at:
 
 ```text
-src-tauri/target/release/bundle/dmg/Cipher Master_1.0.0_x64.dmg
+target/release/bundle/dmg/Cipher Master_<version>_aarch64.dmg
 ```
+
+The repository root is a Cargo workspace, so build output goes to the root `target/` folder. On Windows, the same command produces `target/release/bundle/nsis/*-setup.exe` and `target/release/bundle/msi/*.msi`.
+
+### Running the tests
+
+```bash
+cargo test -p app                                  # cipher, hint, settings and export tests
+cd tests/gui && npm install && npx playwright install chromium && npm test   # GUI tests
+cd integrations/discord-bot && npm install && npm test                      # bot tests
+```
+
+All three suites also run in GitHub Actions on every push and pull request (`.github/workflows/ci.yml`), including a Windows build.
 
 ---
 
 ## 🌐 Automated Cross-Platform Releases
 
 Cross-platform builds (macOS `.dmg` and Windows `.exe`/`.msi`) are compiled automatically via **GitHub Actions** when a version tag is pushed to the repository.
-
-Having automated release documentation in a repository's `README.md` is standard practice, but phrasing it as an absolute guarantee can be confusing if the build pipeline requires manual PR reviews, branch protection checks, or maintainer approval before tag creation.
-
-In collaborative or open-source projects, contributors usually do not have permission to push tags to trigger releases themselves. Writing it from the perspective of **how maintainers trigger releases** clarifies the process for everyone.
 
 ---
 
@@ -221,25 +246,13 @@ Release binaries for macOS (`.dmg`) and Windows (`.exe` / `.msi`) are automatica
 ### For Maintainers: Creating a Release
 
 1. Ensure all feature PRs are reviewed, tested, and merged into `master`.
-2. Create and push a version tag on the latest `master` commit:
+2. Bump `version` in `src-tauri/tauri.conf.json` so it matches the tag (installer file names use it).
+3. Create and push a version tag on the latest `master` commit:
 
    ```bash
-   git tag v1.0.x
-   git push origin v1.0.x
+   git tag v1.2.0
+   git push origin v1.2.0
    ```
-3. GitHub Actions executes the build pipeline, generating compiled assets and drafting a new release on the GitHub Releases page.
+4. GitHub Actions executes the build pipeline, generating compiled assets and drafting a new release on the GitHub Releases page.
 
 ---
-
-### Why this structure works better:
-
-* **Clear Roles:** Specifies that triggering releases is an action taken by maintainers after verification, rather than an automatic step for any contributor.
-* **Review-First:** Keeps the emphasis on merging verified code via PRs into `master` before tagging.
-* **Agnostic Context:** Works cleanly whether you are working on the project alone or with outside collaborators.
-
-
----
-
-## 📜 License
-
-Distributed under the CC BY-NC 4.0 License (Non-Commercial Use Only). See `LICENSE` for details.

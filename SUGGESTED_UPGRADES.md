@@ -2,6 +2,8 @@
 
 This document covers architectural, performance, security, and infrastructure enhancements for **Cipher Master**.
 
+> **Status (v1.2.0):** all of the upgrades listed below are implemented. See README.md for how to use them.
+
 ---
 
 ## 1. Backend & Performance Enhancements

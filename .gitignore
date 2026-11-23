@@ -34,3 +34,6 @@ $RECYCLE.BIN/
 cipher_challenge.txt
 cipher_hint.txt
 cipher_solution.txt
+
+# Node dependencies (GUI tests, Discord bot)
+node_modules/

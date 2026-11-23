@@ -26,11 +26,12 @@ This document serves as the single source of truth for **Cipher Master Engine**.
 ### Cargo Dependencies (`src-tauri/Cargo.toml`)
 * `tauri`: Core framework features with `protocol-asset` and window controls.
 * `serde` / `serde_json`: High-performance JSON serialization/deserialization for Rust-to-JS IPC payloads.
-* `rand`: Pseudo-random number generation for cipher key generation, rotational offsets, and matrix shuffling.
-* `ureq`: Synchronous, lightweight HTTP client used to query local LLM REST endpoints without pulling in heavy asynchronous runtimes.
+* `rand`: Key generation uses `rand::rngs::OsRng` (cryptographically secure).
+* `reqwest` (rustls) + `tokio`: Async HTTP client for Ollama / OpenAI / Anthropic / GitHub / Discord, and async file IO.
+* `tauri-plugin-dialog`, `tauri-plugin-opener`: Native folder picker; opening URLs and folders.
 
 ### External Integrations
-* **Ollama (Optional)**: Connects via local HTTP REST API at `http://localhost:11434/api/generate` requesting the `llama3.2:1b` model.
+* **Ollama (Optional)**: Connects via local HTTP REST API at `http://127.0.0.1:11434/api/generate` requesting the `llama3.2:1b` model.
 * **Built-in Fallback**: Internal algorithmic phrase generator (`fallback_quote`) that operates when Ollama is unavailable, offline, or uninstalled.
 
 ---
@@ -69,7 +70,7 @@ To compile valid release installers, the bundle identifier must avoid default pl
 {
   "$schema": "[https://schema.tauri.app/config/2](https://schema.tauri.app/config/2)",
   "productName": "Cipher Master",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "identifier": "com.xvoet.ciphermaster",
   "build": {
     "frontendDist": "../public"
@@ -103,29 +104,27 @@ To compile valid release installers, the bundle identifier must avoid default pl
 
 ## 5. Core Engine Implementations & Methodologies
 
-### A. Supported Cipher Algorithms (`src-tauri/src/lib.rs`)
+### A. Supported Cipher Algorithms (`src-tauri/src/ciphers.rs`)
 
-1. **Elder Futhark Runes**: Maps standard Latin characters ($A..Z$) to Unicode Elder Futhark runic characters ($\text{ᚠ, ᚢ, ᚦ, ᚨ, ᚱ, ᚲ, \dots}$).
-2. **Caesar Shift**: Rotates alphabetic index by a pseudo-random integer $k \in [1, 25]$:
+Each cipher is a `CipherKey` variant with `encrypt` and `decrypt`; keys are generated with `OsRng`.
 
-$$E(x) = (x + k) \pmod{26}$$
+1. **Elder Futhark Runes** — one-to-one map A..Z → ᚨᛒᚲᛞᛖᚠᚷᚺᛁᛃᚴᛚᛗᚾᛟᛈᛩᚱᛋᛏᚢᚡᚹᛪᛇᛉ.
+2. **Caesar** — $E(x) = (x + k) \bmod 26$, $k \in [1, 25]$.
+3. **Atbash** — $E(x) = 25 - x$.
+4. **Monoalphabetic Substitution** — random permutation of A..Z.
+5. **Vigenère** — keyword shift per letter.
+6. **Rail Fence** — zig-zag over 2–5 rails.
+7. **Affine** — $E(x) = (ax + b) \bmod 26$, $\gcd(a, 26) = 1$.
+8. **A1Z26** — letters → 1..26 joined by `-`, words separated by three spaces.
+9. **Fill in the Blank** — random bijection A..Z → 01..26.
+10. **Playfair** — 5x5 keyword square, I=J, X (or Q) filler; must be the first stage of a chain.
+11. **Enigma I** — rotors I–V, reflector B/C, rings, plugboard (2/6/10 pairs by difficulty), correct double stepping. Reciprocal.
+12. **Baconian** — 26-letter A/B 5-bit groups, words separated by ` / `.
+13. **Columnar Transposition** — keyword order, irregular rows; Hard = two passes.
 
+**Chaining** (`encrypt_chain` / `decrypt_chain_steps`): up to 4 stages. In a chain every stage works on compact A–Z/0–9 text so stages compose exactly. Symbol ciphers (Runes, A1Z26, Fill in the Blank, Baconian) must be last; Playfair must be first.
 
-3. **Atbash Cipher**: Reverses the alphabet index:
-
-$$E(x) = (25 - x) \pmod{26}$$
-
-
-4. **Monoalphabetic Substitution**: Generates a shuffled 26-character alphabet array via `rand::seq::SliceRandom` and maps $A..Z$ directly to the permutation.
-5. **Vigenère Cipher**: Accepts a multi-character key phrase $K$; shifts character $i$ using offset $K[i \pmod{|K|}]$.
-6. **Rail Fence (Zig-Zag)**: Constructs a $W \times H$ rail matrix based on $N$ rails, routes plaintext in a zig-zag movement, and reads row-by-row.
-7. **Affine Cipher**: Multiplies and shifts characters using key pair $(a, b)$ where $\gcd(a, 26) = 1$:
-
-$$E(x) = (a \cdot x + b) \pmod{26}$$
-
-
-8. **A1Z26 Numeric**: Converts each letter to its 1-based numerical index separated by hyphens (e.g., $A=1, B=2, Z=26$).
-9. **Fill in the Blank**: Builds a randomized one-to-one mapping from every letter in $A..Z$ to a unique number in $01..26$. The challenge displays those numbers while preserving word boundaries, `cipher_hint.txt` reveals a small set of known letter mappings, and `cipher_solution.txt` stores the complete mapping.
+**Cryptanalysis** (`analysis.rs`): letter counts, Index of Coincidence (English ≈ 0.067, random ≈ 0.038), top bigrams/trigrams, top symbols. Used for hints and by the in-app workspace (`analyze_text` command).
 
 ### B. Difficulty Formatting Pipeline
 
@@ -135,11 +134,13 @@ $$E(x) = (a \cdot x + b) \pmod{26}$$
 
 ### C. Desktop Output File Protocol
 
-Upon execution of the `generate_cipher_files` IPC command, the engine resolves the user's local Desktop path (`dirs::desktop_dir` or `dirs-next`) and writes three distinct files:
+Upon execution of the `generate_challenge` IPC command (when "save files" is on), the engine uses the custom output folder from Settings if one is set, otherwise resolves the user's Desktop through Tauri's path API (`app.path().desktop_dir()`, which follows OneDrive/redirected Desktops on Windows), falling back to `Documents/Cipher Master`, `~/Cipher Master`, then the app data folder, and writes three distinct files (UTF-8 with BOM and CRLF line endings on Windows):
 
 1. `cipher_challenge.txt`: Contains difficulty level, cipher type name, and formatted ciphertext.
 2. `cipher_hint.txt`: Contains character length, structural analysis, letter distribution metrics, and riddle clues.
-3. `cipher_solution.txt`: Contains original plaintext, decryption parameters/keys, and step-by-step decoding notes.
+3. `cipher_solution.txt`: Contains original plaintext, every stage's key, step-by-step decoding, and a `CTF{...}` flag.
+
+Other IPC commands: `get_hint`, `check_answer`, `reveal_solution`, `analyze_text`, `list_ciphers`, `futhark_map`, `get_settings`, `save_settings`, `pick_output_folder`, `list_ollama_models`, `open_output_folder`, `open_url`, `publish_gist`, `send_to_discord`, `open_cyberchef`, `export_ctf`, `print_challenge`.
 
 ---
 
@@ -147,7 +148,7 @@ Upon execution of the `generate_cipher_files` IPC command, the engine resolves t
 
 ### Ollama Prompt Strategy
 
-When an AI quote is requested, `ureq::post` issues a JSON payload to `http://localhost:11434/api/generate`:
+When an AI quote is requested, `ureq::post` issues a JSON payload to `http://127.0.0.1:11434/api/generate`:
 
 ```json
 {
@@ -207,7 +208,7 @@ Direct pushes to `master` are strictly disabled in project guidelines. All modif
 
 ### Triggering Production Releases (Maintainers Only)
 
-Releases are built via GitHub Actions (`.github/workflows/release.yml`) targeting `macos-latest`, `windows-latest` and `ubuntu-latest`.
+Releases are built via GitHub Actions (`.github/workflows/release.yml`) targeting `macos-latest` (universal Apple Silicon + Intel build), `windows-latest` and `ubuntu-22.04`, plus an Android job that attaches APK/AAB files to the same draft release.
 
 ```bash
 # Tag master commit
@@ -239,7 +240,7 @@ This section documents the foundational prompts and guidelines used to construct
 > **Prompt:**
 > "Integrate a local Ollama API client using the synchronous `ureq` crate in Rust.
 > Requirements:
-> 1. Query `http://localhost:11434/api/generate` with model `llama3.2:1b` to pull a single short philosophical/inspirational quote.
+> 1. Query `http://127.0.0.1:11434/api/generate` with model `llama3.2:1b` to pull a single short philosophical/inspirational quote.
 > 2. Implement a non-blocking timeout strategy. If Ollama is offline or takes too long, seamlessly fall back to an internal algorithmic quote generator function (`fallback_quote`) without crashing or showing an error in the GUI."
 
 ### C. Bundle Identifier & Asset Isolation Debugging Prompts
