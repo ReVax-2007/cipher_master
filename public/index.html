@@ -5,46 +5,644 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Cipher Master</title>
   <style>
-    :root { --ink: #18222d; --muted: #6a7783; --panel: #fffdf8; --line: #ded7c9; --copper: #b75d3b; --teal: #176b6b; }
+    :root { --ink: #18222d; --muted: #5f6c78; --panel: #fffdf8; --line: #ded7c9; --copper: #b75d3b; --teal: #176b6b; --teal-dark: #0e5252; --good: #2f7d4a; --bad: #a8402a; --rune: "Segoe UI Historic", "Noto Sans Runic", "Apple Symbols", Georgia, serif; --mono: ui-monospace, SFMono-Regular, Consolas, "Segoe UI Historic", "Noto Sans Runic", monospace; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; color: var(--ink); font-family: Georgia, "Times New Roman", serif; background: radial-gradient(circle at 90% 5%, #f0c9a5 0, transparent 28%), linear-gradient(135deg, #f7f3ea, #dfe9e4); }
-    main { width: min(1050px, 100%); margin: auto; padding: clamp(1.25rem, 4vw, 4rem); }
-    header { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 2rem; }
+    main { width: min(1100px, 100%); margin: auto; padding: clamp(1rem, 3.5vw, 3rem); }
+    header { display: flex; justify-content: space-between; gap: 1rem; align-items: end; flex-wrap: wrap; margin-bottom: 1.2rem; }
     .eyebrow { color: var(--copper); font: 700 .75rem/1.2 system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
-    h1 { margin: .35rem 0 0; font-size: clamp(2.1rem, 6vw, 4.6rem); line-height: .95; }
-    .mark { color: var(--teal); font-size: 2.5rem; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); gap: 1.25rem; }
-    .panel { background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 18px 45px #293b3214; padding: clamp(1.1rem, 3vw, 2rem); }
-    .panel h2 { margin: 0 0 1.35rem; font-size: 1.35rem; }
-    .fields { display: grid; gap: 1rem; }
-    label { display: grid; gap: .42rem; color: var(--muted); font: 700 .75rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
-    select, button { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 5px; padding: .75rem .85rem; font: 1rem system-ui, sans-serif; }
-    select { color: var(--ink); background: #fff; }
-    button { margin-top: 1.3rem; border: 0; color: #fff; background: var(--teal); font-weight: 700; cursor: pointer; transition: transform .2s, background .2s; }
-    button:hover { background: #0e5252; transform: translateY(-2px); }
-    button:disabled { cursor: wait; opacity: .65; transform: none; }
-    .side { display: grid; align-content: start; gap: 1rem; }
+    h1 { margin: .35rem 0 0; font-size: clamp(2rem, 6vw, 4rem); line-height: .95; }
+    .mark { color: var(--teal); font-family: var(--rune); }
     .status { color: var(--teal); font: 700 .78rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .08em; }
-    #output { min-height: 235px; margin: 0; padding: 1rem; overflow: auto; white-space: pre-wrap; color: #f9f4e9; background: #18222d; border-radius: 5px; font: .85rem/1.55 ui-monospace, SFMono-Regular, monospace; }
-    .note { color: var(--muted); font: .92rem/1.5 system-ui, sans-serif; }
-    @media (max-width: 720px) { header { align-items: start; } .layout { grid-template-columns: 1fr; } .mark { font-size: 1.8rem; } }
+    .status.error { color: var(--bad); }
+    nav { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+    nav button { width: auto; min-height: 40px; margin: 0; padding: .5rem 1rem; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    nav button[aria-selected="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+    nav button:hover { transform: none; background: #fff; }
+    nav button[aria-selected="true"]:hover { background: var(--ink); }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .9fr); gap: 1.1rem; align-items: start; }
+    .stack { display: grid; gap: 1.1rem; align-content: start; }
+    .panel { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 18px 45px #293b3214; padding: clamp(1rem, 2.5vw, 1.6rem); }
+    .panel h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+    .panel h3 { margin: 1rem 0 .5rem; font: 700 .78rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    .fields { display: grid; gap: .9rem; }
+    .row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
+    label { display: grid; gap: .4rem; color: var(--muted); font: 700 .72rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+    label.check { display: flex; align-items: center; gap: .5rem; text-transform: none; letter-spacing: 0; font: .9rem system-ui, sans-serif; color: var(--ink); }
+    label.check input { width: auto; min-height: 0; }
+    select, input, textarea, button { width: 100%; min-height: 42px; border: 1px solid var(--line); border-radius: 5px; padding: .6rem .75rem; font: .95rem system-ui, sans-serif; color: var(--ink); background: #fff; }
+    textarea { min-height: 80px; resize: vertical; font-family: var(--mono); }
+    button { border: 0; color: #fff; background: var(--teal); font-weight: 700; cursor: pointer; transition: transform .15s, background .15s; }
+    button:hover { background: var(--teal-dark); transform: translateY(-1px); }
+    button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+    button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    button.secondary:hover { background: #f3efe6; }
+    button.small { width: auto; min-height: 34px; padding: .35rem .7rem; font-size: .85rem; }
+    .chain-stage { display: grid; grid-template-columns: 2rem 1fr auto; gap: .5rem; align-items: center; }
+    .chain-stage span { font: 700 .8rem system-ui, sans-serif; color: var(--muted); text-align: center; }
+    pre, .cipher-box { margin: 0; padding: .9rem; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #f9f4e9; background: #18222d; border-radius: 5px; font: .9rem/1.6 var(--mono); }
+    #output { min-height: 150px; }
+    .meta { color: var(--muted); font: .85rem/1.5 system-ui, sans-serif; }
+    .meta code { font-size: .8rem; word-break: break-all; }
+    .note { color: var(--muted); font: .88rem/1.5 system-ui, sans-serif; margin: .25rem 0 0; }
+    .actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .5rem; }
+    .actions button { min-height: 38px; font-size: .88rem; }
+    .toast { min-height: 1.3em; font: .88rem/1.4 system-ui, sans-serif; color: var(--teal); }
+    .toast.error { color: var(--bad); }
+    .timer { font: 700 2.2rem/1 var(--mono); color: var(--teal); }
+    .score { font: 700 1rem system-ui, sans-serif; }
+    .hint-list { display: grid; gap: .5rem; margin: .5rem 0 0; padding: 0; list-style: none; }
+    .hint-list li { background: #f4efe4; border-left: 3px solid var(--copper); padding: .55rem .7rem; white-space: pre-wrap; font: .85rem/1.45 system-ui, sans-serif; border-radius: 3px; }
+    .result.good { color: var(--good); } .result.bad { color: var(--bad); }
+    .freq { display: grid; grid-template-columns: repeat(26, 1fr); gap: 2px; align-items: end; height: 120px; margin-top: .5rem; }
+    .freq div { position: relative; display: flex; gap: 1px; align-items: end; height: 100%; }
+    .freq i { flex: 1; display: block; background: var(--teal); border-radius: 2px 2px 0 0; min-height: 1px; }
+    .freq i.en { background: #d9b59f; }
+    .freq-labels { display: grid; grid-template-columns: repeat(26, 1fr); gap: 2px; font: 700 .65rem var(--mono); text-align: center; color: var(--muted); }
+    .legend { display: flex; gap: 1rem; font: .75rem system-ui, sans-serif; color: var(--muted); margin-top: .35rem; }
+    .legend b { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; vertical-align: -1px; margin-right: .25rem; }
+    .stats { display: grid; gap: .25rem; font: .85rem/1.45 system-ui, sans-serif; }
+    .submap { display: grid; grid-template-columns: repeat(13, 1fr); gap: 4px; }
+    .submap label { gap: 2px; text-align: center; font: 700 .72rem var(--mono); color: var(--ink); letter-spacing: 0; }
+    .submap input { min-height: 30px; padding: 0; text-align: center; text-transform: uppercase; font: 700 .9rem var(--mono); }
+    .runes { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: .45rem; }
+    .runes button { display: grid; gap: .1rem; min-height: 66px; padding: .35rem; background: #fff; color: var(--ink); border: 1px solid var(--line); }
+    .runes button:hover { background: #f3efe6; }
+    .runes .glyph { font: 1.7rem/1 var(--rune); color: var(--teal); }
+    .runes .latin { font: 700 .75rem system-ui, sans-serif; color: var(--muted); }
+    .rune-text { font: 1.25rem/1.6 var(--rune); }
+    .empty { color: var(--muted); font: italic .9rem system-ui, sans-serif; }
+    #print-slip { display: none; }
+    @media (max-width: 820px) { .layout, .grid2 { grid-template-columns: 1fr; } .submap { grid-template-columns: repeat(7, 1fr); } }
+    @media print {
+      @page { size: 80mm auto; margin: 4mm; }
+      body { background: #fff; }
+      main { display: none !important; }
+      #print-slip { display: block; width: 72mm; color: #000; font: 10pt/1.4 var(--mono); }
+      #print-slip h1 { font-size: 13pt; margin: 0 0 2mm; text-align: center; }
+      #print-slip .cut { border-top: 1px dashed #000; margin-top: 4mm; padding-top: 1mm; text-align: center; font-size: 8pt; }
+      #print-slip pre { background: none; color: #000; padding: 0; font: 11pt/1.5 var(--mono); }
+    }
   </style>
 </head>
 <body>
   <main>
-    <header><div><div class="eyebrow">A field kit for curious minds</div><h1><span class="mark">ᛏ</span> Cipher Master</h1></div><div class="status" id="status">Ready to encrypt</div></header>
-    <section class="layout">
-      <div class="panel"><h2>Compose a challenge</h2><div class="fields">
-        <label for="cipher">Cipher<select id="cipher"><option value="CustomFuthark">Elder Futhark Runes</option><option value="Caesar">Caesar Shift</option><option value="Atbash">Atbash Cipher</option><option value="Substitution">Monoalphabetic Substitution</option><option value="Vigenere">Vigenere Cipher</option><option value="RailFence">Rail Fence</option><option value="Affine">Affine Cipher</option><option value="A1Z26">A1Z26 Numeric</option><option value="FillInTheBlank">Fill in the Blank</option></select></label>
-        <label for="difficulty">Difficulty<select id="difficulty"><option value="Easy">Easy - spaces and punctuation</option><option value="Medium">Medium - uppercase text</option><option value="Hard">Hard - five character blocks</option></select></label>
-        <label for="length">Quote length<select id="length"><option value="1">Short</option><option value="2">Medium</option><option value="3">Long</option></select></label>
-      </div><button id="generate" onclick="generateCipher()">Generate challenge</button></div>
-      <aside class="side"><div class="panel"><h2>Challenge output</h2><pre id="output">Your encrypted challenge and Desktop file paths will appear here.</pre></div><p class="note">Ollama is optional. When no model is available, Cipher Master selects a quote from its bundled local library.</p></aside>
+    <header>
+      <div><div class="eyebrow">A field kit for curious minds</div><h1><span class="mark">ᛏ</span> Cipher Master</h1></div>
+      <div class="status" id="status" role="status">Ready to encrypt</div>
+    </header>
+
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="create" aria-selected="true">Create</button>
+      <button role="tab" data-tab="solve" aria-selected="false">Solve &amp; Timed Mode</button>
+      <button role="tab" data-tab="runes" aria-selected="false">Rune Map</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+
+    <!-- CREATE -->
+    <section class="tab active" id="tab-create" role="tabpanel">
+      <div class="layout">
+        <div class="panel">
+          <h2>Compose a challenge</h2>
+          <div class="fields">
+            <div>
+              <label>Cipher chain</label>
+              <div id="chain" class="fields" style="gap:.5rem;margin-top:.4rem"></div>
+              <div class="row" style="margin-top:.5rem">
+                <button class="secondary small" id="add-stage" type="button">+ Add cipher stage</button>
+                <span class="note" id="chain-note">Stack up to 4 ciphers. They are applied top to bottom.</span>
+              </div>
+            </div>
+            <div class="grid2">
+              <label for="difficulty">Difficulty<select id="difficulty"><option value="Easy">Easy - spaces and punctuation</option><option value="Medium">Medium - uppercase text</option><option value="Hard">Hard - five character blocks</option></select></label>
+              <label for="length">Quote length<select id="length"><option value="1">Short</option><option value="2" selected>Medium</option><option value="3">Long</option></select></label>
+            </div>
+            <label for="custom-text">Your own text (optional)<textarea id="custom-text" maxlength="2000" placeholder="Leave empty to use an AI-generated or bundled quote."></textarea></label>
+            <div class="note" id="custom-count">0 / 2000</div>
+          </div>
+          <button id="generate" type="button" style="margin-top:1rem">Generate challenge</button>
+        </div>
+
+        <div class="stack">
+          <div class="panel">
+            <h2>Challenge output</h2>
+            <pre id="output">Your encrypted challenge will appear here.</pre>
+            <div class="meta" id="output-meta" style="margin-top:.6rem"></div>
+          </div>
+          <div class="panel">
+            <h2>Share &amp; export</h2>
+            <div class="actions">
+              <button class="secondary" data-needs-challenge id="copy-cipher" type="button">Copy ciphertext</button>
+              <button class="secondary" data-needs-challenge id="go-solve" type="button">Solve it now</button>
+              <button class="secondary" id="open-folder" type="button">Open output folder</button>
+              <button class="secondary" data-needs-challenge id="print" type="button">Print slip</button>
+              <button class="secondary" data-needs-challenge id="cyberchef" type="button">Open in CyberChef</button>
+              <button class="secondary" data-needs-challenge id="ctf" type="button">Export for CTFd</button>
+              <button class="secondary" data-needs-challenge id="discord" type="button">Post to Discord</button>
+              <button class="secondary" data-needs-challenge id="gist" type="button">Publish Gist</button>
+            </div>
+            <div class="row" style="margin-top:.6rem">
+              <label class="check"><input type="checkbox" id="gist-hints" /> Gist includes hints</label>
+              <label class="check"><input type="checkbox" id="gist-solution" /> Gist includes solution</label>
+            </div>
+            <div class="toast" id="share-toast" role="status"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOLVE -->
+    <section class="tab" id="tab-solve" role="tabpanel">
+      <div class="layout">
+        <div class="stack">
+          <div class="panel">
+            <h2>Decryption workspace</h2>
+            <label for="work-text">Ciphertext<textarea id="work-text" rows="4" placeholder="Generate a challenge or paste any ciphertext to analyse."></textarea></label>
+            <h3>Letter frequency</h3>
+            <div class="freq" id="freq"></div>
+            <div class="freq-labels" id="freq-labels"></div>
+            <div class="legend"><span><b style="background:var(--teal)"></b>Ciphertext</span><span><b style="background:#d9b59f"></b>English</span></div>
+            <h3>Statistics</h3>
+            <div class="stats" id="stats"><span class="empty">No text yet.</span></div>
+            <h3>Caesar shift explorer</h3>
+            <div class="row"><input type="range" id="shift" min="0" max="25" value="0" style="flex:1" /><b id="shift-val" style="font-family:var(--mono);min-width:3ch">0</b></div>
+            <pre id="shift-preview" style="margin-top:.5rem"></pre>
+            <h3>Substitution scratchpad <button class="secondary small" id="clear-map" type="button" style="margin-left:.5rem">Clear</button></h3>
+            <p class="note" style="margin-top:0">Type your guess under each ciphertext letter. Unsolved letters show as lowercase.</p>
+            <div class="submap" id="submap"></div>
+            <pre id="sub-preview" style="margin-top:.6rem"></pre>
+            <h3>Notes</h3>
+            <textarea id="scratch" rows="3" placeholder="Scratch notes (not saved)."></textarea>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <h2>Timed challenge</h2>
+            <div class="row" style="justify-content:space-between">
+              <div class="timer" id="timer">00:00</div>
+              <div class="row"><button class="small" id="timer-start" data-needs-challenge type="button">Start</button><button class="secondary small" id="timer-pause" type="button" disabled>Pause</button></div>
+            </div>
+            <p class="meta" id="timer-meta">Generate a challenge, then start the clock. Score drops with time and with each hint.</p>
+            <label for="answer" style="margin-top:.6rem">Your answer<textarea id="answer" rows="3" placeholder="Type the decrypted plaintext"></textarea></label>
+            <div class="row" style="margin-top:.5rem"><button data-needs-challenge id="check" type="button" style="flex:1">Check answer</button><button class="secondary" data-needs-challenge id="hint" type="button" style="flex:1">Reveal next hint</button></div>
+            <div class="result toast" id="answer-result" role="status"></div>
+            <ul class="hint-list" id="hints"></ul>
+            <button class="secondary" data-needs-challenge id="reveal" type="button" style="margin-top:.8rem">Give up &amp; show solution</button>
+            <pre id="solution" style="margin-top:.6rem;display:none"></pre>
+          </div>
+          <div class="panel">
+            <h2>Best scores</h2>
+            <div class="stats" id="best-scores"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RUNES -->
+    <section class="tab" id="tab-runes" role="tabpanel">
+      <div class="layout">
+        <div class="panel">
+          <h2>Elder Futhark rune map</h2>
+          <p class="note" style="margin-top:0">Click a rune to add it to the runic box. This is the exact map Cipher Master uses.</p>
+          <div class="runes" id="rune-grid"></div>
+          <div class="row" style="margin-top:.6rem"><button class="secondary small" id="rune-space" type="button">Space</button><button class="secondary small" id="rune-back" type="button">Backspace</button><button class="secondary small" id="rune-clear" type="button">Clear</button></div>
+        </div>
+        <div class="panel">
+          <h2>Live translation</h2>
+          <div class="fields">
+            <label for="rune-in">Runes<textarea id="rune-in" class="rune-text" rows="3"></textarea></label>
+            <label for="latin-in">Latin letters<textarea id="latin-in" rows="3"></textarea></label>
+          </div>
+          <p class="note">Edit either box; the other updates instantly.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="tab" id="tab-settings" role="tabpanel">
+      <div class="layout">
+        <div class="stack">
+          <div class="panel">
+            <h2>Output files</h2>
+            <div class="fields">
+              <label class="check"><input type="checkbox" id="set-save-files" /> Save challenge, hint and solution .txt files on every generation</label>
+              <label>Output folder<input id="set-output-dir" readonly placeholder="Desktop (default)" /></label>
+              <div class="row"><button class="secondary small" id="pick-folder" type="button">Choose folder…</button><button class="secondary small" id="reset-folder" type="button">Use Desktop</button></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Quote generator</h2>
+            <div class="fields">
+              <label class="check"><input type="checkbox" id="set-ollama" /> Use local Ollama when it is running</label>
+              <label>Ollama address<input id="set-ollama-url" placeholder="http://127.0.0.1:11434" /></label>
+              <label>Ollama model
+                <div class="row"><select id="set-ollama-model" style="flex:1"></select><button class="secondary small" id="refresh-models" type="button">Refresh</button></div>
+              </label>
+              <h3 style="margin-bottom:0">Cloud fallback (optional)</h3>
+              <label>Provider<select id="set-cloud-provider"><option value="none">None - use the bundled quotes</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></label>
+              <label>API key<input id="set-cloud-key" type="password" autocomplete="off" /></label>
+              <label>Model<input id="set-cloud-model" placeholder="Default for provider" /></label>
+              <p class="note">Used only when Ollama is off or unavailable. Keys are stored in this app's settings file on this computer.</p>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <h2>Integrations</h2>
+            <div class="fields">
+              <label>GitHub token (gist scope)<input id="set-github-token" type="password" autocomplete="off" /></label>
+              <label class="check"><input type="checkbox" id="set-gist-public" /> Publish Gists as public</label>
+              <label>Discord webhook URL<input id="set-discord" placeholder="https://discord.com/api/webhooks/…" /></label>
+              <p class="note">Integrations are opt-in. Solutions are never shared unless you tick "Gist includes solution".</p>
+            </div>
+          </div>
+          <div class="panel">
+            <button id="save-settings" type="button">Save settings</button>
+            <div class="toast" id="settings-toast" role="status"></div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
+
+  <section id="print-slip" aria-hidden="true">
+    <h1>ᛏ CIPHER MASTER</h1>
+    <div id="slip-meta"></div>
+    <pre id="slip-text"></pre>
+    <div class="cut">- - - decrypt me - - -</div>
+  </section>
+
   <script>
-    function getInvoke() { const tauri = window.__TAURI__; if (tauri?.core?.invoke) return tauri.core.invoke; if (tauri?.invoke) return tauri.invoke; if (window.__TAURI_INTERNALS__?.invoke) return window.__TAURI_INTERNALS__.invoke; throw new Error("Tauri IPC bindings not found."); }
-    async function generateCipher() { const button = document.getElementById("generate"); const output = document.getElementById("output"); const status = document.getElementById("status"); button.disabled = true; status.textContent = "Forging challenge..."; output.textContent = "Selecting quote and encrypting..."; try { output.textContent = await getInvoke()("generate_cipher_challenge", { cipher_type: cipher.value, difficulty: difficulty.value, length_choice: Number(length.value) }); status.textContent = "Challenge ready"; } catch (error) { output.textContent = "Error: " + (error.message || error); status.textContent = "Generation failed"; } finally { button.disabled = false; } }
+    "use strict";
+    const $ = (id) => document.getElementById(id);
+    const ENGLISH = [8.2,1.5,2.8,4.3,12.7,2.2,2.0,6.1,7.0,0.15,0.77,4.0,2.4,6.7,7.5,1.9,0.095,6.0,6.3,9.1,2.8,0.98,2.4,0.15,2.0,0.074];
+    const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const state = { ciphers: [], challenge: null, hintsShown: 0, hintCount: 0, timer: { running: false, start: 0, elapsed: 0, handle: null, solved: false }, futhark: [], settings: null };
+
+    function invoke(cmd, args) {
+      const tauri = window.__TAURI__;
+      const fn = tauri?.core?.invoke || window.__TAURI_INTERNALS__?.invoke;
+      if (!fn) return Promise.reject(new Error("Tauri IPC bindings not found."));
+      return fn(cmd, args);
+    }
+    const errText = (e) => (e && e.message) || String(e);
+    function setStatus(text, isError = false) { const s = $("status"); s.textContent = text; s.classList.toggle("error", isError); }
+    function toast(id, text, isError = false) { const t = $(id); t.textContent = text; t.classList.toggle("error", isError); }
+    function lsGet(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } }
+    function lsSet(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } }
+
+    // ---------- Tabs ----------
+    function showTab(name) {
+      document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+      document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === "tab-" + name));
+    }
+    document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+    // ---------- Chain builder ----------
+    function stageSelect(value) {
+      const sel = document.createElement("select");
+      for (const c of state.ciphers) { const o = document.createElement("option"); o.value = c.id; o.textContent = c.label; sel.append(o); }
+      sel.value = value;
+      sel.addEventListener("change", validateChain);
+      return sel;
+    }
+    function addStage(value) {
+      const chain = $("chain");
+      if (chain.children.length >= 4) return;
+      const row = document.createElement("div");
+      row.className = "chain-stage";
+      const num = document.createElement("span");
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.className = "secondary small"; remove.textContent = "✕"; remove.title = "Remove stage";
+      remove.addEventListener("click", () => { row.remove(); renumber(); validateChain(); });
+      row.append(num, stageSelect(value), remove);
+      // Symbol ciphers (runes, numbers, A/B) must stay last, so new stages go in front of them.
+      const last = chain.lastElementChild?.querySelector("select");
+      const lastIsTerminal = last && state.ciphers.some((c) => c.id === last.value && c.terminal);
+      if (lastIsTerminal) chain.insertBefore(row, chain.lastElementChild); else chain.append(row);
+      renumber(); validateChain();
+    }
+    function renumber() {
+      const rows = [...$("chain").children];
+      rows.forEach((r, i) => { r.querySelector("span").textContent = (i + 1) + "."; r.querySelector("button").disabled = rows.length === 1; });
+      $("add-stage").disabled = rows.length >= 4;
+    }
+    const chainIds = () => [...$("chain").querySelectorAll("select")].map((s) => s.value);
+    function validateChain() {
+      const ids = chainIds();
+      const terminal = new Set(state.ciphers.filter((c) => c.terminal).map((c) => c.id));
+      let msg = "";
+      if (ids.slice(0, -1).some((id) => terminal.has(id))) msg = "Runes, A1Z26, Fill in the Blank and Baconian turn text into symbols, so they must be the last stage.";
+      else if (ids.slice(1).includes("Playfair")) msg = "Playfair adds filler letters, so it must be the first stage.";
+      $("chain-note").textContent = msg || "Stack up to 4 ciphers. They are applied top to bottom.";
+      $("chain-note").style.color = msg ? "var(--bad)" : "";
+      $("generate").disabled = Boolean(msg);
+    }
+    $("add-stage").addEventListener("click", () => addStage("Caesar"));
+    $("custom-text").addEventListener("input", () => { $("custom-count").textContent = $("custom-text").value.length + " / 2000"; });
+
+    // ---------- Generate ----------
+    function setChallengeButtons() { document.querySelectorAll("[data-needs-challenge]").forEach((b) => { b.disabled = !state.challenge; }); }
+
+    async function generate() {
+      const button = $("generate");
+      button.disabled = true;
+      setStatus("Forging challenge…");
+      $("output").textContent = "Selecting text and encrypting…";
+      $("output-meta").textContent = "";
+      try {
+        const request = {
+          ciphers: chainIds(),
+          difficulty: $("difficulty").value,
+          length_choice: Number($("length").value),
+          custom_text: $("custom-text").value.trim() || null,
+        };
+        const view = await invoke("generate_challenge", { request });
+        state.challenge = view;
+        $("output").textContent = view.ciphertext;
+        renderMeta(view);
+        loadIntoWorkspace(view);
+        setStatus("Challenge ready");
+      } catch (e) {
+        $("output").textContent = "Error: " + errText(e);
+        setStatus("Generation failed", true);
+      } finally {
+        button.disabled = false;
+        validateChain();
+        setChallengeButtons();
+      }
+    }
+    function renderMeta(view) {
+      const meta = $("output-meta");
+      meta.replaceChildren();
+      const line = (label, value) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = label + ": "; d.append(b, value); meta.append(d); };
+      line("Cipher", view.cipher_label);
+      line("Difficulty", view.difficulty);
+      line("Text source", view.source);
+      if (view.files.length) {
+        const list = document.createElement("div");
+        view.files.forEach((f) => { const c = document.createElement("code"); c.textContent = f; list.append(c, document.createElement("br")); });
+        line("Saved files", list);
+      } else {
+        line("Saved files", "none (file saving is off in Settings)");
+      }
+    }
+    $("generate").addEventListener("click", generate);
+
+    // ---------- Share & export ----------
+    async function action(fn, okText) {
+      try { const r = await fn(); toast("share-toast", typeof okText === "function" ? okText(r) : okText); }
+      catch (e) { toast("share-toast", errText(e), true); }
+    }
+    $("copy-cipher").addEventListener("click", () => action(() => navigator.clipboard.writeText(state.challenge.ciphertext), "Ciphertext copied."));
+    $("go-solve").addEventListener("click", () => showTab("solve"));
+    $("open-folder").addEventListener("click", () => action(() => invoke("open_output_folder"), "Opened the output folder."));
+    $("print").addEventListener("click", () => {
+      $("slip-meta").textContent = state.challenge.cipher_label + " · " + state.challenge.difficulty + " · " + new Date().toLocaleDateString();
+      $("slip-text").textContent = state.challenge.ciphertext;
+      action(() => invoke("print_challenge").catch(() => window.print()), "Print dialog opened. Pick your receipt printer and an 80 mm (or 58 mm) paper size.");
+    });
+    $("cyberchef").addEventListener("click", () => action(() => invoke("open_cyberchef"), (r) => r.supported ? "Opened CyberChef with a decoding recipe." : "Opened CyberChef with the ciphertext (CyberChef has no recipe for every cipher in this chain)."));
+    $("ctf").addEventListener("click", () => action(() => invoke("export_ctf"), (files) => "CTFd challenge written: " + files[0]));
+    $("discord").addEventListener("click", () => action(() => invoke("send_to_discord"), "Posted to Discord."));
+    $("gist").addEventListener("click", () => action(async () => {
+      const url = await invoke("publish_gist", { include_hints: $("gist-hints").checked, include_solution: $("gist-solution").checked });
+      invoke("open_url", { url }).catch(() => {});
+      return url;
+    }, (url) => "Gist published: " + url));
+
+    // ---------- Workspace ----------
+    let analyzeTimer = null;
+    function workText() { return $("work-text").value; }
+    function scheduleAnalysis() { clearTimeout(analyzeTimer); analyzeTimer = setTimeout(runAnalysis, 150); updateShift(); updateSub(); }
+    async function runAnalysis() {
+      const text = workText();
+      if (!text.trim()) { renderFreq(new Array(26).fill(0), 0); $("stats").innerHTML = '<span class="empty">No text yet.</span>'; return; }
+      try {
+        const a = await invoke("analyze_text", { text });
+        renderFreq(a.counts, a.letters);
+        const stats = $("stats"); stats.replaceChildren();
+        const add = (label, value) => { const d = document.createElement("div"); const b = document.createElement("b"); b.textContent = label + ": "; d.append(b, value); stats.append(d); };
+        add("Letters", String(a.letters));
+        add("Index of Coincidence", a.ic.toFixed(4) + " — " + a.ic_reading);
+        if (a.top_bigrams.length) add("Top bigrams", a.top_bigrams.map(([g, n]) => g + "×" + n).join("  "));
+        if (a.top_trigrams.length) add("Top trigrams", a.top_trigrams.map(([g, n]) => g + "×" + n).join("  "));
+        if (!a.letters && a.top_symbols.length) add("Top symbols", a.top_symbols.map(([g, n]) => g + "×" + n).join("  "));
+      } catch (e) { $("stats").textContent = errText(e); }
+    }
+    function renderFreq(counts, total) {
+      const freq = $("freq"); freq.replaceChildren();
+      const pct = counts.map((c) => (total ? (c * 100) / total : 0));
+      const max = Math.max(13, ...pct);
+      pct.forEach((p, i) => {
+        const col = document.createElement("div");
+        col.title = ALPHA[i] + ": " + counts[i] + " (" + p.toFixed(1) + "%) · English " + ENGLISH[i] + "%";
+        const c = document.createElement("i"); c.style.height = (p / max) * 100 + "%";
+        const e = document.createElement("i"); e.className = "en"; e.style.height = (ENGLISH[i] / max) * 100 + "%";
+        col.append(c, e); freq.append(col);
+      });
+    }
+    function shiftText(text, k) {
+      return text.replace(/[A-Za-z]/g, (ch) => { const base = ch <= "Z" ? 65 : 97; return String.fromCharCode(base + ((ch.charCodeAt(0) - base - k + 26) % 26)); });
+    }
+    function updateShift() { const k = Number($("shift").value); $("shift-val").textContent = k; $("shift-preview").textContent = shiftText(workText(), k) || " "; }
+    function updateSub() {
+      const map = {};
+      document.querySelectorAll("#submap input").forEach((inp) => { const v = inp.value.trim().toUpperCase(); if (/^[A-Z]$/.test(v)) map[inp.dataset.letter] = v; });
+      $("sub-preview").textContent = workText().replace(/[A-Za-z]/g, (ch) => map[ch.toUpperCase()] || ch.toLowerCase()) || " ";
+    }
+    function buildSubmap() {
+      const grid = $("submap");
+      for (const L of ALPHA) {
+        const label = document.createElement("label"); label.textContent = L;
+        const inp = document.createElement("input"); inp.maxLength = 1; inp.dataset.letter = L; inp.setAttribute("aria-label", "Plaintext guess for " + L);
+        inp.addEventListener("input", updateSub);
+        label.append(inp); grid.append(label);
+      }
+    }
+    $("work-text").addEventListener("input", scheduleAnalysis);
+    $("shift").addEventListener("input", updateShift);
+    $("clear-map").addEventListener("click", () => { document.querySelectorAll("#submap input").forEach((i) => { i.value = ""; }); updateSub(); });
+
+    // ---------- Timed mode ----------
+    const fmt = (ms) => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); };
+    const elapsed = () => state.timer.elapsed + (state.timer.running ? Date.now() - state.timer.start : 0);
+    function tick() { $("timer").textContent = fmt(elapsed()); }
+    function startTimer() {
+      if (state.timer.running || state.timer.solved) return;
+      state.timer.running = true; state.timer.start = Date.now();
+      state.timer.handle = setInterval(tick, 250);
+      $("timer-start").disabled = true; $("timer-pause").disabled = false;
+    }
+    function pauseTimer() {
+      if (!state.timer.running) return;
+      state.timer.elapsed = elapsed(); state.timer.running = false; clearInterval(state.timer.handle);
+      $("timer-start").disabled = state.timer.solved || !state.challenge; $("timer-start").textContent = "Resume"; $("timer-pause").disabled = true; tick();
+    }
+    function resetTimer() {
+      clearInterval(state.timer.handle);
+      state.timer = { running: false, start: 0, elapsed: 0, handle: null, solved: false };
+      $("timer-start").textContent = "Start"; $("timer-pause").disabled = true; tick();
+    }
+    function computeScore(ms, hints, view) {
+      const mult = { Easy: 1, Medium: 1.5, Hard: 2 }[view.difficulty] * (1 + 0.5 * (view.ciphers.length - 1));
+      return Math.max(50, Math.round(1000 * mult - 2 * (ms / 1000) - 150 * hints));
+    }
+    function renderBest() {
+      const best = lsGet("cipherMaster.best", {});
+      const box = $("best-scores"); box.replaceChildren();
+      for (const d of ["Easy", "Medium", "Hard"]) {
+        const row = document.createElement("div");
+        const b = document.createElement("b"); b.textContent = d + ": ";
+        row.append(b, best[d] ? best[d].score + " pts (" + fmt(best[d].ms) + ", " + best[d].hints + " hints, " + best[d].cipher + ")" : "—");
+        box.append(row);
+      }
+    }
+    function loadIntoWorkspace(view) {
+      $("work-text").value = view.ciphertext;
+      $("answer").value = ""; $("hints").replaceChildren(); $("solution").style.display = "none";
+      toast("answer-result", ""); $("answer-result").className = "result toast"; $("hint").disabled = false;
+      state.hintsShown = 0; state.hintCount = view.hint_count;
+      $("hint").textContent = "Reveal next hint (" + view.hint_count + " left)";
+      $("timer-meta").textContent = "Timer ready. Base score " + computeScore(0, 0, view) + " pts, −2 per second, −150 per hint.";
+      resetTimer(); scheduleAnalysis();
+    }
+    $("timer-start").addEventListener("click", startTimer);
+    $("timer-pause").addEventListener("click", pauseTimer);
+    $("hint").addEventListener("click", async () => {
+      try {
+        const text = await invoke("get_hint", { index: state.hintsShown });
+        const li = document.createElement("li"); li.textContent = text; $("hints").append(li);
+        state.hintsShown += 1;
+        const left = state.hintCount - state.hintsShown;
+        $("hint").textContent = left > 0 ? "Reveal next hint (" + left + " left)" : "No more hints";
+        $("hint").disabled = left <= 0;
+      } catch (e) { toast("answer-result", errText(e), true); }
+    });
+    $("check").addEventListener("click", async () => {
+      try {
+        const r = await invoke("check_answer", { guess: $("answer").value });
+        if (r.correct) {
+          const ms = elapsed(); pauseTimer(); state.timer.solved = true; $("timer-start").disabled = true;
+          const timed = ms > 0;
+          let msg = "Correct! ";
+          if (timed) {
+            const score = computeScore(ms, state.hintsShown, state.challenge);
+            msg += "Solved in " + fmt(ms) + " with " + state.hintsShown + " hint(s): " + score + " points.";
+            const best = lsGet("cipherMaster.best", {});
+            const d = state.challenge.difficulty;
+            if (!best[d] || score > best[d].score) { best[d] = { score, ms, hints: state.hintsShown, cipher: state.challenge.cipher_label }; lsSet("cipherMaster.best", best); msg += " New best!"; renderBest(); }
+          } else { msg += "Start the timer next time to earn a score."; }
+          toast("answer-result", msg); $("answer-result").className = "result toast good";
+        } else {
+          toast("answer-result", "Not yet — " + r.match_percent + "% of letters are in the right place.", true);
+          $("answer-result").className = "result toast bad";
+        }
+      } catch (e) { toast("answer-result", errText(e), true); }
+    });
+    $("reveal").addEventListener("click", async () => {
+      try {
+        const s = await invoke("reveal_solution");
+        pauseTimer(); state.timer.solved = true; $("timer-start").disabled = true;
+        $("solution").textContent = s.plaintext + "\n\n" + s.keys.join("\n") + "\n\nFlag: " + s.flag;
+        $("solution").style.display = "block";
+      } catch (e) { toast("answer-result", errText(e), true); }
+    });
+
+    // ---------- Runes ----------
+    function toRunes(text) { const m = Object.fromEntries(state.futhark); return text.replace(/[A-Za-z]/g, (c) => m[c.toUpperCase()] || c); }
+    function toLatin(text) { const m = Object.fromEntries(state.futhark.map(([l, r]) => [r, l])); return [...text].map((c) => m[c] || c).join(""); }
+    function buildRunes() {
+      const grid = $("rune-grid"); grid.replaceChildren();
+      for (const [latin, rune] of state.futhark) {
+        const b = document.createElement("button"); b.type = "button"; b.title = rune + " = " + latin;
+        const g = document.createElement("span"); g.className = "glyph"; g.textContent = rune;
+        const l = document.createElement("span"); l.className = "latin"; l.textContent = latin;
+        b.append(g, l);
+        b.addEventListener("click", () => { $("rune-in").value += rune; $("latin-in").value = toLatin($("rune-in").value); });
+        grid.append(b);
+      }
+    }
+    $("rune-in").addEventListener("input", () => { $("latin-in").value = toLatin($("rune-in").value); });
+    $("latin-in").addEventListener("input", () => { $("rune-in").value = toRunes($("latin-in").value); });
+    $("rune-space").addEventListener("click", () => { $("rune-in").value += " "; $("latin-in").value = toLatin($("rune-in").value); });
+    $("rune-back").addEventListener("click", () => { $("rune-in").value = [...$("rune-in").value].slice(0, -1).join(""); $("latin-in").value = toLatin($("rune-in").value); });
+    $("rune-clear").addEventListener("click", () => { $("rune-in").value = ""; $("latin-in").value = ""; });
+
+    // ---------- Settings ----------
+    function fillModelSelect(models, current) {
+      const sel = $("set-ollama-model"); sel.replaceChildren();
+      const all = [...new Set([current, ...models].filter(Boolean))];
+      for (const m of all) { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.append(o); }
+      sel.value = current;
+    }
+    function renderSettings(s) {
+      state.settings = s;
+      $("set-save-files").checked = s.save_files;
+      $("set-output-dir").value = s.output_dir || "";
+      $("set-ollama").checked = s.ollama_enabled;
+      $("set-ollama-url").value = s.ollama_url;
+      fillModelSelect([], s.ollama_model);
+      $("set-cloud-provider").value = s.cloud_provider;
+      $("set-cloud-key").value = s.cloud_api_key;
+      $("set-cloud-model").value = s.cloud_model;
+      $("set-github-token").value = s.github_token;
+      $("set-gist-public").checked = s.gist_public;
+      $("set-discord").value = s.discord_webhook_url;
+    }
+    function readSettings() {
+      return {
+        output_dir: $("set-output-dir").value || null,
+        save_files: $("set-save-files").checked,
+        ollama_enabled: $("set-ollama").checked,
+        ollama_url: $("set-ollama-url").value,
+        ollama_model: $("set-ollama-model").value || "llama3.2:1b",
+        cloud_provider: $("set-cloud-provider").value,
+        cloud_api_key: $("set-cloud-key").value,
+        cloud_model: $("set-cloud-model").value,
+        github_token: $("set-github-token").value,
+        gist_public: $("set-gist-public").checked,
+        discord_webhook_url: $("set-discord").value,
+      };
+    }
+    async function saveSettings() {
+      try { renderSettings(await invoke("save_settings", { settings: readSettings() })); toast("settings-toast", "Settings saved."); return true; }
+      catch (e) { toast("settings-toast", errText(e), true); return false; }
+    }
+    async function refreshModels() {
+      try {
+        if (!(await saveSettings())) return;
+        const models = await invoke("list_ollama_models");
+        fillModelSelect(models, $("set-ollama-model").value);
+        toast("settings-toast", models.length ? "Found " + models.length + " Ollama model(s)." : "Ollama is running but has no models. Run: ollama pull llama3.2:1b");
+      } catch (e) { toast("settings-toast", errText(e), true); }
+    }
+    $("save-settings").addEventListener("click", saveSettings);
+    $("refresh-models").addEventListener("click", refreshModels);
+    $("pick-folder").addEventListener("click", async () => {
+      try { const dir = await invoke("pick_output_folder"); if (dir) { $("set-output-dir").value = dir; await saveSettings(); } }
+      catch (e) { toast("settings-toast", errText(e), true); }
+    });
+    $("reset-folder").addEventListener("click", async () => { $("set-output-dir").value = ""; await saveSettings(); });
+
+    // ---------- Init ----------
+    async function init() {
+      buildSubmap(); renderFreq(new Array(26).fill(0), 0); renderBest(); setChallengeButtons(); tick();
+      try {
+        state.ciphers = await invoke("list_ciphers");
+        addStage("CustomFuthark");
+        state.futhark = await invoke("futhark_map");
+        buildRunes();
+        renderSettings(await invoke("get_settings"));
+        invoke("list_ollama_models").then((m) => fillModelSelect(m, state.settings.ollama_model)).catch(() => {});
+      } catch (e) {
+        setStatus("Backend unavailable: " + errText(e), true);
+      }
+    }
+    init();
   </script>
 </body>
 </html>

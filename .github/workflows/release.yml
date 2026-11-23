@@ -12,7 +12,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+          - platform: windows-latest
+            args: ''
+          - platform: ubuntu-22.04
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -25,9 +31,20 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: '. -> target'
+
+      - name: Run unit tests
+        if: matrix.platform != 'ubuntu-22.04'
+        run: cargo test -p app
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-latest'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -49,9 +66,14 @@ jobs:
           releaseBody: 'Download the compiled standalone application binaries below.'
           releaseDraft: true
           prerelease: false
+          args: ${{ matrix.args }}
 
   android:
     name: Android APK and AAB
+    # Wait for the desktop job so the Android files are attached to the same draft release
+    # instead of racing it and creating a second release for the same tag.
+    needs: release
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -80,9 +102,12 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version '^2.0' --locked
 
+      - name: Point Tauri at the Android NDK
+        run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+
       - name: Initialize Android project
         working-directory: src-tauri
-        run: cargo tauri android init
+        run: cargo tauri android init --ci
 
       - name: Build Android packages
         working-directory: src-tauri
@@ -101,6 +126,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
+          draft: true
           files: |
             src-tauri/gen/android/app/build/outputs/apk/**/*.apk
             src-tauri/gen/android/app/build/outputs/bundle/**/*.aab

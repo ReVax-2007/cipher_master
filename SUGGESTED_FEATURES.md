@@ -2,6 +2,8 @@
 
 This document details new functional capabilities and user-facing features proposed for future versions of **Cipher Master**.
 
+> **Status (v1.2.0):** all of the features listed below are implemented. See README.md for how to use them.
+
 ---
 
 ## 1. Core Cipher & Engine Expansion

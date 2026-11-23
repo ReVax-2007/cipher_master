@@ -2,6 +2,8 @@
 
 This document outlines proposed integrations with external services, tools, and platforms to extend the functionality and ecosystem of **Cipher Master**.
 
+> **Status (v1.2.0):** all of the integrations listed below are implemented. See README.md for how to use them.
+
 ---
 
 ## 1. Cloud & Synchronization Services
