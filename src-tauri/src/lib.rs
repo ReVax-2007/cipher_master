@@ -663,6 +663,8 @@ mod tests {
             .build(mock_context(noop_assets()))
             .unwrap();
         let webview = tauri::WebviewWindowBuilder::new(&app, "main", Default::default()).build().unwrap();
+        // The app's own origin; anything else is treated as a remote URL and denied by the ACL.
+        let origin = if cfg!(windows) { "http://tauri.localhost" } else { "tauri://localhost" };
         let call = |cmd: &str, body: serde_json::Value| {
             get_ipc_response(
                 &webview,
@@ -670,7 +672,7 @@ mod tests {
                     cmd: cmd.into(),
                     callback: CallbackFn(0),
                     error: CallbackFn(1),
-                    url: "tauri://localhost".parse().unwrap(),
+                    url: origin.parse().unwrap(),
                     body: InvokeBody::Json(body),
                     headers: Default::default(),
                     invoke_key: INVOKE_KEY.to_string(),
